@@ -12,6 +12,7 @@ import androidx.glance.ImageProvider
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.LinearProgressIndicator
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
@@ -27,7 +28,6 @@ import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
-import androidx.glance.layout.wrapContentWidth
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -49,13 +49,6 @@ class UsageWidget : GlanceAppWidget() {
 
     @Composable
     private fun WidgetContent(data: UsageData) {
-        val percent = data.percentUsed
-        val progressColor = when {
-            percent >= 0.9f -> Color(0xFFE05252)
-            percent >= 0.7f -> Color(0xFFE8A045)
-            else -> Color(0xFFD97757)
-        }
-
         Box(
             modifier = GlanceModifier
                 .fillMaxSize()
@@ -68,7 +61,7 @@ class UsageWidget : GlanceAppWidget() {
                 modifier = GlanceModifier.fillMaxSize(),
                 verticalAlignment = Alignment.Vertical.Top
             ) {
-                // Header: "Claude · Pro"  +  refresh button aligned right
+                // Header: "Claude · Pro" + refresh button
                 Row(
                     modifier = GlanceModifier.fillMaxWidth(),
                     verticalAlignment = Alignment.Vertical.CenterVertically
@@ -91,7 +84,6 @@ class UsageWidget : GlanceAppWidget() {
                             )
                         )
                     }
-                    // Push refresh button to the right
                     Spacer(GlanceModifier.defaultWeight())
                     Image(
                         provider = ImageProvider(R.drawable.ic_refresh),
@@ -104,88 +96,95 @@ class UsageWidget : GlanceAppWidget() {
 
                 Spacer(GlanceModifier.height(10.dp))
 
-                // Main count
-                if (data.messagesLimit > 0) {
+                val rows = listOfNotNull(
+                    data.sessionLimit?.let { "Session" to it },
+                    data.weeklyLimits.firstOrNull()?.let { "Weekly" to it }
+                )
+
+                if (rows.isEmpty()) {
                     Text(
-                        text = "${data.messagesUsed} / ${data.messagesLimit}",
+                        text = "Tap refresh to load",
                         style = TextStyle(
-                            color = ColorProvider(Color(0xFFF0EDE8)),
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold
+                            color = ColorProvider(Color(0xFF6B6863)),
+                            fontSize = 11.sp
                         )
                     )
                 } else {
-                    Text(
-                        text = if (data.messagesUsed > 0) "${data.messagesUsed}" else "—",
-                        style = TextStyle(
-                            color = ColorProvider(Color(0xFFF0EDE8)),
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    )
-                }
-
-                Spacer(GlanceModifier.height(2.dp))
-                Text(
-                    text = "messages used",
-                    style = TextStyle(
-                        color = ColorProvider(Color(0xFF9E9B96)),
-                        fontSize = 11.sp
-                    )
-                )
-
-                Spacer(GlanceModifier.height(10.dp))
-
-                // Progress bar
-                if (data.messagesLimit > 0) {
-                    Box(
-                        modifier = GlanceModifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .background(Color(0xFF2E2C2A))
-                            .cornerRadius(3.dp)
-                    ) {
-                        Box(
-                            modifier = GlanceModifier
-                                .fillMaxWidth(percent.coerceIn(0f, 1f))
-                                .height(6.dp)
-                                .background(progressColor)
-                                .cornerRadius(3.dp)
-                        ) {}
+                    rows.forEachIndexed { index, (label, limit) ->
+                        LimitBlock(label, limit)
+                        if (index < rows.lastIndex) Spacer(GlanceModifier.height(8.dp))
                     }
-                    Spacer(GlanceModifier.height(6.dp))
-                }
 
-                // Reset info
-                val resetText = when {
-                    !data.resetAtIso.isNullOrEmpty() -> "Resets ${formatResetShort(data.resetAtIso)}"
-                    !data.hasData -> "Tap refresh to load"
-                    else -> ""
-                }
-                if (resetText.isNotEmpty()) {
-                    Text(
-                        text = resetText,
-                        style = TextStyle(
-                            color = ColorProvider(Color(0xFF9E9B96)),
-                            fontSize = 10.sp
+                    // Countdown for the session window (the one that resets soonest).
+                    val countdown = formatCountdown(data.sessionLimit?.resetsAt)
+                    if (countdown.isNotEmpty()) {
+                        Spacer(GlanceModifier.height(8.dp))
+                        Text(
+                            text = countdown,
+                            style = TextStyle(
+                                color = ColorProvider(Color(0xFF6B6863)),
+                                fontSize = 10.sp
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
     }
 
-    private fun formatPlanName(raw: String): String =
-        raw.replace("_", " ").split(" ").joinToString(" ") { it.lowercase().replaceFirstChar(Char::uppercase) }
+    @Composable
+    private fun LimitBlock(label: String, limit: com.adriaan.claudeusage.data.model.UsageLimit) {
+        val color = when {
+            limit.percent >= 90 -> Color(0xFFE05252)
+            limit.percent >= 70 -> Color(0xFFE8A045)
+            else -> Color(0xFFD97757)
+        }
+        Row(
+            modifier = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Vertical.CenterVertically
+        ) {
+            Text(
+                text = label,
+                style = TextStyle(color = ColorProvider(Color(0xFF9E9B96)), fontSize = 12.sp)
+            )
+            Spacer(GlanceModifier.defaultWeight())
+            Text(
+                text = "${limit.percent}%",
+                style = TextStyle(
+                    color = ColorProvider(color),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            )
+        }
+        Spacer(GlanceModifier.height(4.dp))
+        LinearProgressIndicator(
+            progress = limit.fraction,
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .cornerRadius(4.dp),
+            color = ColorProvider(color),
+            backgroundColor = ColorProvider(Color(0xFF2E2C2A))
+        )
+    }
 
-    private fun formatResetShort(iso: String): String = try {
-        val now = Instant.now()
-        val reset = Instant.parse(iso)
-        if (reset.isBefore(now)) return "soon"
-        val hours = ChronoUnit.HOURS.between(now, reset)
-        val mins = ChronoUnit.MINUTES.between(now, reset) % 60
-        if (hours > 0) "in ${hours}h ${mins}m" else "in ${mins}m"
-    } catch (e: Exception) {
-        ""
+    private fun formatPlanName(raw: String): String =
+        raw.replace("_", " ").split(" ")
+            .joinToString(" ") { it.lowercase().replaceFirstChar(Char::uppercase) }
+
+    private fun formatCountdown(iso: String?): String {
+        if (iso.isNullOrEmpty()) return ""
+        return try {
+            val now = Instant.now()
+            val reset = Instant.parse(iso)
+            if (reset.isBefore(now)) return "Resetting soon"
+            val hours = ChronoUnit.HOURS.between(now, reset)
+            val mins = ChronoUnit.MINUTES.between(now, reset) % 60
+            val timeLeft = if (hours > 0) "${hours}h ${mins}m" else "${mins}m"
+            "Session resets in $timeLeft"
+        } catch (_: Exception) {
+            ""
+        }
     }
 }

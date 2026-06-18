@@ -12,9 +12,7 @@
                           C43.5,73 35,64.5 35,54 C35,43.5 43.5,35 54,35
                           C60,35 65.5,37.5 69,42 L77.5,35.5 C72,28.5 63.5,24 54,24 Z" />
     <!-- Dot accent -->
-    <circle
+    <path
         android:fillColor="#FFD4B8"
-        android:cx="74"
-        android:cy="34"
-        android:r="6" />
+        android:pathData="M68,34 A6,6 0 0,1 80,34 A6,6 0 0,1 68,34 Z" />
 </vector>

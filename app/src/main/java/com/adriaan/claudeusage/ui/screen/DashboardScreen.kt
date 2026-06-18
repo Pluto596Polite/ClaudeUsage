@@ -1,6 +1,5 @@
 package com.adriaan.claudeusage.ui.screen
 
-import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -43,13 +42,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.adriaan.claudeusage.data.model.UsageData
 import com.adriaan.claudeusage.ui.component.InfoRow
 import com.adriaan.claudeusage.ui.component.UsageProgressCard
@@ -243,11 +240,15 @@ private fun UsageContent(data: UsageData, onShowRaw: () -> Unit) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Main usage card
-        UsageProgressCard(
-            messagesUsed = data.messagesUsed,
-            messagesLimit = data.messagesLimit
-        )
+        // One card per limit window: session first, then weekly windows.
+        val ordered = listOfNotNull(data.sessionLimit) + data.weeklyLimits
+        ordered.forEach { limit ->
+            UsageProgressCard(
+                title = limitTitle(limit.kind),
+                percent = limit.percent,
+                resetLabel = resetLabel(limit.resetsAt)
+            )
+        }
 
         // Details card
         Surface(
@@ -275,24 +276,6 @@ private fun UsageContent(data: UsageData, onShowRaw: () -> Unit) {
 
                 if (!data.orgName.isNullOrEmpty()) {
                     InfoRow(label = "Account", value = data.orgName)
-                }
-
-                if (!data.resetAtIso.isNullOrEmpty()) {
-                    InfoRow(
-                        label = "Resets",
-                        value = formatResetTime(data.resetAtIso)
-                    )
-                    InfoRow(
-                        label = "Time remaining",
-                        value = formatTimeRemaining(data.resetAtIso)
-                    )
-                }
-
-                if (data.messagesLimit > 0) {
-                    InfoRow(
-                        label = "Remaining",
-                        value = "${data.messagesLimit - data.messagesUsed} messages"
-                    )
                 }
             }
         }
@@ -334,6 +317,20 @@ private fun UsageContent(data: UsageData, onShowRaw: () -> Unit) {
 
         Spacer(Modifier.height(16.dp))
     }
+}
+
+private fun limitTitle(kind: String): String = when (kind) {
+    "session" -> "Current session"
+    "weekly_all" -> "Weekly · all models"
+    "weekly_opus" -> "Weekly · Opus"
+    else -> kind.replace("_", " ").replaceFirstChar { it.uppercase() }
+}
+
+/** "Resets Jun 18, 11:00 PM · in 2h 5m", or just the date if already past. */
+private fun resetLabel(iso: String?): String? {
+    if (iso.isNullOrEmpty()) return null
+    val remaining = formatTimeRemaining(iso)
+    return "Resets ${formatResetTime(iso)} · $remaining"
 }
 
 private fun formatPlanName(raw: String): String {

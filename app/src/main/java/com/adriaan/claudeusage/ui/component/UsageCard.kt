@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -35,22 +34,27 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
 
+/**
+ * A single usage window (e.g. "Current session", "Weekly"): big percent + ring + bar + reset label.
+ * claude.ai reports usage as percent-consumed per window, so [percent] is 0..100.
+ */
 @Composable
 fun UsageProgressCard(
-    messagesUsed: Int,
-    messagesLimit: Int,
+    title: String,
+    percent: Int,
+    resetLabel: String?,
     modifier: Modifier = Modifier
 ) {
-    val percent = if (messagesLimit > 0) messagesUsed.toFloat() / messagesLimit else 0f
+    val fraction = (percent / 100f).coerceIn(0f, 1f)
     val animatedPercent by animateFloatAsState(
-        targetValue = percent,
+        targetValue = fraction,
         animationSpec = tween(durationMillis = 800),
         label = "progress"
     )
 
     val progressColor = when {
-        percent >= 0.9f -> ErrorRed
-        percent >= 0.7f -> WarningAmber
+        percent >= 90 -> ErrorRed
+        percent >= 70 -> WarningAmber
         else -> ClaudeOrange
     }
 
@@ -68,34 +72,30 @@ fun UsageProgressCard(
             ) {
                 Column {
                     Text(
-                        text = "Messages",
+                        text = title,
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(4.dp))
-                    if (messagesLimit > 0) {
-                        Row(verticalAlignment = Alignment.Bottom) {
-                            Text(
-                                text = "$messagesUsed",
-                                style = MaterialTheme.typography.headlineLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = " / $messagesLimit",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-                        }
-                    } else {
+                    Row(verticalAlignment = Alignment.Bottom) {
                         Text(
-                            text = "$messagesUsed",
+                            text = "$percent",
                             style = MaterialTheme.typography.headlineLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.Bold
                         )
+                        Text(
+                            text = "%",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
                     }
+                    Text(
+                        text = "used",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
                 // Circular progress
@@ -107,29 +107,30 @@ fun UsageProgressCard(
                 )
             }
 
-            if (messagesLimit > 0) {
-                Spacer(Modifier.height(16.dp))
-                // Progress bar
+            Spacer(Modifier.height(16.dp))
+            // Progress bar
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxWidth(animatedPercent.coerceIn(0f, 1f))
                         .height(6.dp)
                         .clip(RoundedCornerShape(3.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(animatedPercent.coerceIn(0f, 1f))
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(progressColor)
-                    )
-                }
+                        .background(progressColor)
+                )
+            }
+
+            if (!resetLabel.isNullOrEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "${(percent * 100).toInt()}% used",
+                    text = resetLabel,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = progressColor
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

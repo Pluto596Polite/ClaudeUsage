@@ -28,22 +28,20 @@ class UsageRepository(val sessionManager: SessionManager) {
         val org = orgs.first()
         val orgId = org.uuid.ifEmpty { org.id }
 
-        val (usageResponse, rawJson) = api.getUsage(orgId)
+        val (limits, rawJson) = api.getUsage(orgId)
+
+        // No endpoint returned usable limit windows. Do NOT persist an empty result over the
+        // last-known-good data — that would blank the dashboard and widget. Fail so the UI shows
+        // the error (with cached data preserved) and the diagnostic of what was tried.
+        if (limits.isEmpty()) {
+            return@withContext Result.failure(
+                Exception(rawJson ?: "Claude returned no usage data.")
+            )
+        }
 
         val data = UsageData(
-            messagesUsed = usageResponse?.messageCount
-                ?: usageResponse?.messagesUsed
-                ?: 0,
-            messagesLimit = usageResponse?.messageLimit
-                ?: usageResponse?.messagesLimit
-                ?: 0,
-            resetAtIso = usageResponse?.nextResetAt
-                ?: usageResponse?.resetAt
-                ?: usageResponse?.periodEnd,
-            planName = usageResponse?.plan
-                ?: usageResponse?.tier
-                ?: org.planTier
-                ?: org.billingType,
+            limits = limits,
+            planName = org.planTier ?: org.billingType,
             orgName = org.name,
             lastFetchedEpoch = System.currentTimeMillis(),
             rawJson = rawJson

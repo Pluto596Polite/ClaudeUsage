@@ -2,7 +2,8 @@ package com.adriaan.claudeusage.data.api
 
 import com.adriaan.claudeusage.data.model.AccountInfo
 import com.adriaan.claudeusage.data.model.Organization
-import com.adriaan.claudeusage.data.model.UsageResponse
+import com.adriaan.claudeusage.data.model.UsageData
+import com.adriaan.claudeusage.data.model.UsageLimit
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.logging.HttpLoggingInterceptor
@@ -30,21 +31,25 @@ class ClaudeApiService(private val cookieString: String) {
         })
         .build()
 
-    private fun get(path: String): String? {
+    /** HTTP status code + body (body null on transport failure). status -1 = exception. */
+    private data class HttpResult(val status: Int, val body: String?)
+
+    private fun get(path: String): HttpResult {
         return try {
             val request = Request.Builder()
                 .url("https://claude.ai$path")
                 .get()
                 .build()
             val response = client.newCall(request).execute()
-            if (response.isSuccessful) response.body?.string() else null
+            val body = response.body?.string()
+            HttpResult(response.code, if (response.isSuccessful) body else null)
         } catch (e: Exception) {
-            null
+            HttpResult(-1, null)
         }
     }
 
     fun getOrganizations(): List<Organization> {
-        val json = get("/api/organizations") ?: return emptyList()
+        val json = get("/api/organizations").body ?: return emptyList()
         return try {
             val arr = JSONArray(json)
             (0 until arr.length()).map { i ->
@@ -62,55 +67,41 @@ class ClaudeApiService(private val cookieString: String) {
         }
     }
 
-    fun getUsage(orgId: String): Pair<UsageResponse?, String?> {
-        // Try multiple endpoint patterns
+    /**
+     * Result of a usage fetch. On success [limits] is non-empty and [raw] holds the JSON that
+     * produced it. On failure [limits] is empty and [raw] holds a diagnostic of every endpoint
+     * tried with its HTTP status — surfaced in the UI so a moved/auth-failed endpoint is visible
+     * instead of silently showing zeros.
+     */
+    data class UsageResult(val limits: List<UsageLimit>, val raw: String?)
+
+    fun getUsage(orgId: String): UsageResult {
+        // claude.ai serves Pro usage from /usage as percent-per-window limit objects.
+        // Keep fallbacks in case the path moves.
         val endpoints = listOf(
             "/api/organizations/$orgId/usage",
-            "/api/organizations/$orgId/subscription",
             "/api/organizations/$orgId/limits",
             "/api/account/usage",
             "/api/usage"
         )
 
+        val diagnostics = StringBuilder("No usage endpoint returned usable data.\n\nTried:\n")
         for (endpoint in endpoints) {
-            val raw = get(endpoint) ?: continue
-            if (raw.startsWith("{") || raw.startsWith("[")) {
-                val usage = parseUsageJson(raw)
-                if (usage != null) return Pair(usage, raw)
-            }
-        }
-        return Pair(null, null)
-    }
+            val result = get(endpoint)
+            val statusLabel = if (result.status == -1) "network error" else "HTTP ${result.status}"
+            diagnostics.append("• $endpoint → $statusLabel\n")
 
-    private fun parseUsageJson(json: String): UsageResponse? {
-        return try {
-            val obj = if (json.startsWith("[")) {
-                JSONArray(json).optJSONObject(0) ?: return null
-            } else {
-                JSONObject(json)
-            }
-
-            UsageResponse(
-                messageCount = obj.optInt("message_count").takeIf { it > 0 },
-                messageLimit = obj.optInt("message_limit").takeIf { it > 0 },
-                messagesUsed = obj.optInt("messages_used").takeIf { it > 0 },
-                messagesLimit = obj.optInt("messages_limit").takeIf { it > 0 },
-                nextResetAt = obj.optString("next_reset_at").ifEmpty { null },
-                resetAt = obj.optString("reset_at").ifEmpty { null },
-                periodStart = obj.optString("period_start").ifEmpty { null },
-                periodEnd = obj.optString("period_end").ifEmpty { null },
-                plan = obj.optString("plan").ifEmpty { null },
-                tier = obj.optString("tier").ifEmpty { null }
-            )
-        } catch (e: Exception) {
-            null
+            val raw = result.body ?: continue
+            val limits = UsageData.parseLimits(raw)
+            if (limits.isNotEmpty()) return UsageResult(limits, raw)
         }
+        return UsageResult(emptyList(), diagnostics.toString())
     }
 
     fun getAccountInfo(): AccountInfo? {
         val endpoints = listOf("/api/auth/session", "/api/account", "/api/me")
         for (endpoint in endpoints) {
-            val raw = get(endpoint) ?: continue
+            val raw = get(endpoint).body ?: continue
             try {
                 val obj = JSONObject(raw)
                 val user = obj.optJSONObject("user") ?: obj
