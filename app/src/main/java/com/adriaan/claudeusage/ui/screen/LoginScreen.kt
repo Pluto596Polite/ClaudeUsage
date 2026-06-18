@@ -1,9 +1,10 @@
 package com.adriaan.claudeusage.ui.screen
 
 import android.annotation.SuppressLint
+import android.os.Handler
+import android.os.Looper
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
-import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
@@ -32,6 +33,24 @@ import androidx.compose.ui.viewinterop.AndroidView
 fun LoginScreen(onLoginSuccess: (cookies: String) -> Unit) {
     var pageProgress by remember { mutableFloatStateOf(0f) }
     var isLoading by remember { mutableStateOf(true) }
+    // Guard so the success callback fires exactly once.
+    val triggered = remember { mutableStateOf(false) }
+
+    // claude.ai is a single-page app: after login it routes client-side without a full page
+    // load, so URL-based detection is unreliable. Instead we detect the auth cookie (sessionKey),
+    // which is exactly what the /usage API call needs. We're logged in once it appears while on
+    // claude.ai (and not on a third-party OAuth page).
+    fun maybeFinish(url: String?) {
+        if (triggered.value) return
+        val u = (url ?: "").lowercase()
+        if (u.contains("accounts.google") || u.contains("appleid.apple")) return
+        val cookies = CookieManager.getInstance().getCookie("https://claude.ai") ?: ""
+        if (cookies.contains("sessionKey=")) {
+            triggered.value = true
+            CookieManager.getInstance().flush()
+            onLoginSuccess(cookies)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -79,36 +98,21 @@ fun LoginScreen(onLoginSuccess: (cookies: String) -> Unit) {
                     CookieManager.getInstance().setAcceptCookie(true)
                     CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
 
-                    webViewClient = object : WebViewClient() {
-                        override fun shouldOverrideUrlLoading(
-                            view: WebView,
-                            request: WebResourceRequest
-                        ): Boolean {
-                            val url = request.url.toString()
-                            // Detect successful login: redirected to main chat or home
-                            if (isLoggedInUrl(url)) {
-                                view.postDelayed({
-                                    val cookies = CookieManager.getInstance()
-                                        .getCookie("https://claude.ai") ?: ""
-                                    if (cookies.isNotEmpty()) {
-                                        onLoginSuccess(cookies)
-                                    }
-                                }, 1500)
-                            }
-                            return false
+                    val webView = this
+                    // Poll for the session cookie — covers SPA route changes and async login
+                    // completion that never trigger onPageFinished.
+                    val handler = Handler(Looper.getMainLooper())
+                    val poll = object : Runnable {
+                        override fun run() {
+                            maybeFinish(webView.url)
+                            if (!triggered.value) handler.postDelayed(this, 1000)
                         }
+                    }
 
+                    webViewClient = object : WebViewClient() {
                         override fun onPageFinished(view: WebView, url: String?) {
                             isLoading = false
-                            if (url != null && isLoggedInUrl(url)) {
-                                view.postDelayed({
-                                    val cookies = CookieManager.getInstance()
-                                        .getCookie("https://claude.ai") ?: ""
-                                    if (cookies.isNotEmpty()) {
-                                        onLoginSuccess(cookies)
-                                    }
-                                }, 1000)
-                            }
+                            maybeFinish(url)
                         }
                     }
 
@@ -120,18 +124,9 @@ fun LoginScreen(onLoginSuccess: (cookies: String) -> Unit) {
                     }
 
                     loadUrl("https://claude.ai/login")
+                    handler.postDelayed(poll, 1500)
                 }
             }
         )
     }
-}
-
-private fun isLoggedInUrl(url: String): Boolean {
-    val lower = url.lowercase()
-    return (lower.contains("claude.ai") || lower.contains("claude.ai/new") ||
-            lower.contains("claude.ai/chats") || lower.contains("claude.ai/projects")) &&
-            !lower.contains("/login") &&
-            !lower.contains("/auth") &&
-            !lower.contains("accounts.google") &&
-            !lower.contains("appleid.apple")
 }

@@ -42,8 +42,10 @@ class ClaudeApiService(private val cookieString: String) {
                 .build()
             val response = client.newCall(request).execute()
             val body = response.body?.string()
+            android.util.Log.d("ClaudeUsageNet", "GET $path -> ${response.code} (${body?.length ?: 0} bytes)")
             HttpResult(response.code, if (response.isSuccessful) body else null)
         } catch (e: Exception) {
+            android.util.Log.w("ClaudeUsageNet", "GET $path failed: ${e.message}")
             HttpResult(-1, null)
         }
     }
