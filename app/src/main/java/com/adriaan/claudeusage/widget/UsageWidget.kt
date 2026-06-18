@@ -7,9 +7,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
@@ -22,12 +25,15 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
+import androidx.glance.layout.wrapContentWidth
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.adriaan.claudeusage.MainActivity
+import com.adriaan.claudeusage.R
 import com.adriaan.claudeusage.data.local.SessionManager
 import com.adriaan.claudeusage.data.model.UsageData
 import kotlinx.coroutines.flow.first
@@ -56,13 +62,13 @@ class UsageWidget : GlanceAppWidget() {
                 .background(Color(0xFF1A1917))
                 .cornerRadius(16.dp)
                 .clickable(actionStartActivity<MainActivity>())
-                .padding(16.dp)
+                .padding(14.dp)
         ) {
             Column(
                 modifier = GlanceModifier.fillMaxSize(),
                 verticalAlignment = Alignment.Vertical.Top
             ) {
-                // Header row
+                // Header: "Claude · Pro"  +  refresh button aligned right
                 Row(
                     modifier = GlanceModifier.fillMaxWidth(),
                     verticalAlignment = Alignment.Vertical.CenterVertically
@@ -85,9 +91,18 @@ class UsageWidget : GlanceAppWidget() {
                             )
                         )
                     }
+                    // Push refresh button to the right
+                    Spacer(GlanceModifier.defaultWeight())
+                    Image(
+                        provider = ImageProvider(R.drawable.ic_refresh),
+                        contentDescription = "Refresh",
+                        modifier = GlanceModifier
+                            .size(18.dp)
+                            .clickable(actionRunCallback<RefreshWidgetAction>())
+                    )
                 }
 
-                Spacer(GlanceModifier.height(12.dp))
+                Spacer(GlanceModifier.height(10.dp))
 
                 // Main count
                 if (data.messagesLimit > 0) {
@@ -119,7 +134,7 @@ class UsageWidget : GlanceAppWidget() {
                     )
                 )
 
-                Spacer(GlanceModifier.height(12.dp))
+                Spacer(GlanceModifier.height(10.dp))
 
                 // Progress bar
                 if (data.messagesLimit > 0) {
@@ -138,13 +153,13 @@ class UsageWidget : GlanceAppWidget() {
                                 .cornerRadius(3.dp)
                         ) {}
                     }
-                    Spacer(GlanceModifier.height(8.dp))
+                    Spacer(GlanceModifier.height(6.dp))
                 }
 
                 // Reset info
                 val resetText = when {
                     !data.resetAtIso.isNullOrEmpty() -> "Resets ${formatResetShort(data.resetAtIso)}"
-                    !data.hasData -> "Tap to load"
+                    !data.hasData -> "Tap refresh to load"
                     else -> ""
                 }
                 if (resetText.isNotEmpty()) {

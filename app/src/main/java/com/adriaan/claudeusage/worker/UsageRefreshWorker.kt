@@ -37,8 +37,9 @@ class UsageRefreshWorker(
         private const val WORK_NAME = "usage_refresh"
 
         fun schedule(context: Context) {
+            // Android enforces a 15-minute minimum for PeriodicWork — this is the closest to 5 min allowed.
             val request = PeriodicWorkRequestBuilder<UsageRefreshWorker>(
-                30, TimeUnit.MINUTES
+                15, TimeUnit.MINUTES
             ).build()
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
