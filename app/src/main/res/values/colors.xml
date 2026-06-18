@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Claude brand colors -->
+    <color name="claude_orange">#D97757</color>
+    <color name="claude_orange_dark">#B85E3E</color>
+    <color name="claude_orange_light">#F0956F</color>
+
+    <!-- Dark theme -->
+    <color name="bg_dark">#1A1917</color>
+    <color name="surface_dark">#252422</color>
+    <color name="surface_elevated">#2E2C2A</color>
+
+    <!-- Light theme -->
+    <color name="bg_light">#F9F7F4</color>
+    <color name="surface_light">#FFFFFF</color>
+
+    <!-- Text -->
+    <color name="text_primary_dark">#F0EDE8</color>
+    <color name="text_secondary_dark">#9E9B96</color>
+    <color name="text_primary_light">#1A1917</color>
+    <color name="text_secondary_light">#6B6863</color>
+
+    <!-- Widget -->
+    <color name="widget_bg">#1A1917</color>
+    <color name="widget_text">#F0EDE8</color>
+</resources>

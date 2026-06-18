@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">Claude Usage</string>
+    <string name="login_title">Sign in to Claude</string>
+    <string name="dashboard_title">Usage</string>
+    <string name="messages_used">Messages Used</string>
+    <string name="resets_in">Resets in</string>
+    <string name="refresh">Refresh</string>
+    <string name="logout">Sign out</string>
+    <string name="widget_label">Claude Usage</string>
+    <string name="loading">Loading…</string>
+    <string name="error_fetch">Could not load usage data</string>
+    <string name="no_data">No usage data available</string>
+    <string name="last_updated">Updated %1$s</string>
+    <string name="messages_of">%1$d of %2$d</string>
+    <string name="plan_label">Plan</string>
+    <string name="usage_period">Usage Period</string>
+</resources>
