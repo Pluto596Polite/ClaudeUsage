@@ -43,9 +43,10 @@ class UpdateChecker(
                 .get()
                 .build()
 
-            val response = client.newCall(request).execute()
-            val body = response.body?.string()
-            if (!response.isSuccessful || body.isNullOrBlank()) {
+            val (successful, body) = client.newCall(request).execute().use { response ->
+                response.isSuccessful to response.body?.string()
+            }
+            if (!successful || body.isNullOrBlank()) {
                 return@withContext Result.success(null)
             }
 

@@ -34,7 +34,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +46,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.adriaan.claudeusage.notification.NotificationHelper
 import com.adriaan.claudeusage.viewmodel.SettingsViewModel
 
@@ -69,9 +72,17 @@ fun SettingsScreen(
         if (granted) viewModel.setNotificationsEnabled(true)
     }
 
-    // Keep the permission status in sync when returning to this screen.
-    LaunchedEffect(Unit) {
-        permissionGranted = NotificationHelper.hasPermission(context)
+    // Re-check the permission every time the screen resumes, so granting it from system
+    // settings (outside the app) is reflected when the user returns.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                permissionGranted = NotificationHelper.hasPermission(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Column(
