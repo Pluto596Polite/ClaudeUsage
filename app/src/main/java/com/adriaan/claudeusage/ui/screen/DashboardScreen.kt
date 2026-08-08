@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Logout
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -49,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.adriaan.claudeusage.data.model.UsageData
 import com.adriaan.claudeusage.ui.component.InfoRow
+import com.adriaan.claudeusage.ui.component.UpdateDialog
 import com.adriaan.claudeusage.ui.component.UsageProgressCard
 import com.adriaan.claudeusage.viewmodel.MainViewModel
 import com.adriaan.claudeusage.viewmodel.UiState
@@ -64,16 +66,23 @@ import java.util.Locale
 @Composable
 fun DashboardScreen(
     viewModel: MainViewModel,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val updateInfo by viewModel.updateInfo.collectAsState()
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showRawJson by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.loadCachedData()
         viewModel.refresh()
+        viewModel.checkForUpdate()
+    }
+
+    updateInfo?.let { info ->
+        UpdateDialog(info = info, onDismiss = { viewModel.dismissUpdate() })
     }
 
     if (showLogoutDialog) {
@@ -126,12 +135,21 @@ fun DashboardScreen(
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            IconButton(onClick = { viewModel.refresh() }) {
-                Icon(
-                    Icons.Default.Refresh,
-                    contentDescription = "Refresh",
-                    tint = MaterialTheme.colorScheme.primary
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onOpenSettings) {
+                    Icon(
+                        Icons.Outlined.Notifications,
+                        contentDescription = "Alerts & settings",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(onClick = { viewModel.refresh() }) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = "Refresh",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
 

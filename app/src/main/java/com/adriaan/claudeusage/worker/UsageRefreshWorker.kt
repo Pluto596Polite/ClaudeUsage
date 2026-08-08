@@ -8,7 +8,9 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.adriaan.claudeusage.data.local.SessionManager
+import com.adriaan.claudeusage.data.local.SettingsManager
 import com.adriaan.claudeusage.data.repository.UsageRepository
+import com.adriaan.claudeusage.notification.QuotaAlertNotifier
 import com.adriaan.claudeusage.widget.UsageWidget
 import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
@@ -24,8 +26,13 @@ class UsageRefreshWorker(
         if (!isLoggedIn) return Result.success()
 
         val repository = UsageRepository(sessionManager)
+        val settingsManager = SettingsManager(context)
+        val notifier = QuotaAlertNotifier(context, settingsManager)
+
         repository.fetchUsageData()
-            .onSuccess {
+            .onSuccess { data ->
+                // Fire any newly-crossed quota-threshold alerts.
+                notifier.evaluate(data)
                 // Update all pinned widgets
                 UsageWidget().updateAll(context)
             }
