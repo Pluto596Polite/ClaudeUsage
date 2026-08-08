@@ -17,12 +17,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.adriaan.claudeusage.data.local.SettingsManager
 import com.adriaan.claudeusage.data.repository.UsageRepository
+import com.adriaan.claudeusage.notification.QuotaAlertNotifier
 import com.adriaan.claudeusage.ui.screen.DashboardScreen
 import com.adriaan.claudeusage.ui.screen.LoginScreen
+import com.adriaan.claudeusage.ui.screen.SettingsScreen
 import com.adriaan.claudeusage.ui.theme.ClaudeUsageTheme
 import com.adriaan.claudeusage.viewmodel.MainViewModel
 import com.adriaan.claudeusage.viewmodel.NavEvent
+import com.adriaan.claudeusage.viewmodel.SettingsViewModel
 
 class MainActivity : ComponentActivity() {
 
@@ -34,7 +38,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             ClaudeUsageTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    AppNavigation(repository = app.repository)
+                    AppNavigation(
+                        repository = app.repository,
+                        quotaAlertNotifier = app.quotaAlertNotifier,
+                        settingsManager = app.settingsManager
+                    )
                 }
             }
         }
@@ -42,7 +50,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun AppNavigation(repository: UsageRepository) {
+private fun AppNavigation(
+    repository: UsageRepository,
+    quotaAlertNotifier: QuotaAlertNotifier,
+    settingsManager: SettingsManager
+) {
     val navController = rememberNavController()
     val isLoggedIn by repository.isLoggedIn.collectAsState(initial = false)
 
@@ -50,7 +62,15 @@ private fun AppNavigation(repository: UsageRepository) {
         factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                MainViewModel(repository) as T
+                MainViewModel(repository, quotaAlertNotifier) as T
+        }
+    )
+
+    val settingsVm: SettingsViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                SettingsViewModel(settingsManager) as T
         }
     )
 
@@ -83,7 +103,17 @@ private fun AppNavigation(repository: UsageRepository) {
             LoginScreen(onLoginSuccess = { cookies -> vm.onLoginSuccess(cookies) })
         }
         composable("dashboard") {
-            DashboardScreen(viewModel = vm, onLogout = { vm.logout() })
+            DashboardScreen(
+                viewModel = vm,
+                onLogout = { vm.logout() },
+                onOpenSettings = { navController.navigate("settings") }
+            )
+        }
+        composable("settings") {
+            SettingsScreen(
+                viewModel = settingsVm,
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }

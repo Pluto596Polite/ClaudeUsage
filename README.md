@@ -6,10 +6,34 @@ Android app to monitor your Claude.ai usage limits, messages remaining, and rese
 
 - **Sign in** via Claude's web login (no credentials stored by the app)
 - **Usage dashboard** — messages used / limit, % consumed, time until reset
+- **Quota alerts** — get a phone notification when usage crosses thresholds you set (50%, 75%, …), fully configurable
+- **Auto-update** — the app checks GitHub Releases on launch and prompts you to install a newer build
 - **Home screen widget** — pin to launcher for instant glance
-- **Auto-refresh** — background sync every 30 minutes via WorkManager
+- **Auto-refresh** — background sync every 15 minutes via WorkManager
 - **Offline cache** — last-known data shown when offline
 - **Claude design** — matches the Claude desktop app's dark warm aesthetic
+
+## Quota alerts
+
+Tap the bell icon on the dashboard to open **Alerts & Settings**:
+
+- Toggle quota alerts on/off (grants the notification permission on Android 13+)
+- Add or remove threshold percentages (defaults: 50%, 75%, 90%)
+
+When any usage window (session or weekly) reaches a threshold, the app posts a
+notification — **once per threshold per window**. The alert re-arms automatically
+after the window resets and usage drops back below the threshold. Thresholds are
+evaluated during the background sync (~every 15 minutes) and whenever you open the app.
+
+## Updates
+
+Releases are published on GitHub with an attached APK. On launch the app calls the
+public `releases/latest` endpoint, compares the release tag to the installed
+`versionName`, and shows an **Update available** dialog when a newer build exists.
+Tapping **Update** downloads the APK so you can install it.
+
+Releases are produced automatically by the `Release` GitHub Actions workflow when a
+`v*` tag is pushed (e.g. `git tag v1.2.0 && git push origin v1.2.0`).
 
 ## Screenshots
 
@@ -61,6 +85,30 @@ Claude's internal API endpoints are not publicly documented. The app tries these
 - `GET /api/account/usage`
 
 If Claude changes their API, you may see an empty dashboard but the app will show the raw API response (tap "View raw API data") to help diagnose.
+
+## Tests
+
+Pure logic is covered by JVM unit tests (no device/emulator needed):
+
+- `VersionCompare` — release version parsing & "is newer" comparison (drives auto-update)
+- `QuotaAlertEvaluator` — threshold crossing, fire-once, re-arm after reset, stale-flag pruning
+- `Thresholds` — parsing/normalising the configurable alert thresholds
+- `UsageData.parseLimits` — parsing the claude.ai `/usage` response
+
+Run them locally:
+
+```bash
+./gradlew testDebugUnitTest
+```
+
+### CI gate
+
+Every push and pull request runs the suite via the **Tests** GitHub Actions workflow
+(`.github/workflows/tests.yml`); the **Release** workflow also runs it before building an APK.
+
+To require it before merging, enable branch protection on `main`
+(**Settings → Branches → Add rule**) and mark the **`unit-tests`** status check as required.
+That blocks merging any PR whose tests fail.
 
 ## Tech stack
 

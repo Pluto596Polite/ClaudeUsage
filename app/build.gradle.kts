@@ -12,15 +12,22 @@ android {
         applicationId = "com.adriaan.claudeusage"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // GitHub repo the in-app updater checks for new releases.
+        buildConfigField("String", "GITHUB_OWNER", "\"Pluto596Polite\"")
+        buildConfigField("String", "GITHUB_REPO", "\"ClaudeUsage\"")
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Sign the release APK with the auto-generated debug key so CI can produce an
+            // installable artifact without a managed keystore. Fine for a personal side-loaded app.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
@@ -35,6 +42,11 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 }
 
@@ -78,6 +90,12 @@ dependencies {
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    // Unit testing (JVM)
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+    // Real org.json on the JVM test classpath (android.jar only ships stubs).
+    testImplementation("org.json:json:20240303")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
