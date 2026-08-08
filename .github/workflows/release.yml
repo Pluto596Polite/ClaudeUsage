@@ -1,16 +1,21 @@
 name: Release
 
-# Builds a signed APK and publishes a GitHub Release. Two ways to trigger:
-#   1. Push a version tag:  git tag v1.1.0 && git push origin v1.1.0
-#   2. Run manually (Actions tab / workflow_dispatch) with a tag input — the workflow
-#      then creates that tag at the selected commit and publishes the release.
-# The in-app updater reads the release's `tag_name` and attached `.apk` asset to
-# prompt users to update.
+# Builds a signed APK and publishes a GitHub Release (creating its tag). Triggers:
+#   1. Push a version tag:     git tag v1.1.0 && git push origin v1.1.0
+#   2. Change release.properties on the development branch (the `version=` value becomes the tag).
+#   3. Run manually from the Actions tab (workflow_dispatch) with a tag input.
+# The workflow's GITHUB_TOKEN creates the tag/release, so no direct tag push is required.
+# The in-app updater reads the release's `tag_name` and attached `.apk` asset to prompt updates.
 
 on:
   push:
     tags:
       - 'v*'
+    branches:
+      - 'claude/**'
+      - main
+    paths:
+      - 'release.properties'
   workflow_dispatch:
     inputs:
       tag:
@@ -49,8 +54,14 @@ jobs:
           set -euo pipefail
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             TAG="${{ github.event.inputs.tag }}"
-          else
+          elif [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             TAG="${GITHUB_REF_NAME}"
+          else
+            TAG=$(grep -E '^version=' release.properties | head -n1 | cut -d= -f2 | tr -d '[:space:]')
+          fi
+          if [ -z "$TAG" ]; then
+            echo "Could not resolve a release tag." >&2
+            exit 1
           fi
           APK=$(find app/build/outputs/apk/release -name '*.apk' | head -n 1)
           if [ -z "$APK" ]; then
