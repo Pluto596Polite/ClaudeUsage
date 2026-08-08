@@ -52,10 +52,10 @@ class UpdateChecker(
 
             val json = JSONObject(body)
             val tag = json.optString("tag_name").ifEmpty { json.optString("name") }
-            val latestVersion = normalizeVersion(tag)
+            val latestVersion = VersionCompare.normalize(tag)
             if (latestVersion.isEmpty()) return@withContext Result.success(null)
 
-            if (!isNewer(latestVersion, normalizeVersion(currentVersionName))) {
+            if (!VersionCompare.isNewer(latestVersion, VersionCompare.normalize(currentVersionName))) {
                 return@withContext Result.success(null)
             }
 
@@ -82,24 +82,5 @@ class UpdateChecker(
             }
         }
         return null
-    }
-
-    /** Strip a leading "v" and any pre-release/build suffix, keeping the dotted numeric core. */
-    private fun normalizeVersion(raw: String?): String {
-        if (raw.isNullOrBlank()) return ""
-        return raw.trim().removePrefix("v").removePrefix("V").takeWhile { it.isDigit() || it == '.' }
-    }
-
-    /** True when [candidate] is a strictly higher dotted-numeric version than [current]. */
-    private fun isNewer(candidate: String, current: String): Boolean {
-        val a = candidate.split(".").mapNotNull { it.toIntOrNull() }
-        val b = current.split(".").mapNotNull { it.toIntOrNull() }
-        val len = maxOf(a.size, b.size)
-        for (i in 0 until len) {
-            val ai = a.getOrElse(i) { 0 }
-            val bi = b.getOrElse(i) { 0 }
-            if (ai != bi) return ai > bi
-        }
-        return false
     }
 }

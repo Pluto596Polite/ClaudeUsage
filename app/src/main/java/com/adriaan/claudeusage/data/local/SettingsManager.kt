@@ -30,9 +30,9 @@ class SettingsManager(private val context: Context) {
         private val KEY_THRESHOLDS = stringPreferencesKey("alert_thresholds")
         private val KEY_FIRED_FLAGS = stringPreferencesKey("alert_fired_flags")
 
-        val DEFAULT_THRESHOLDS = listOf(50, 75, 90)
-        const val MIN_THRESHOLD = 1
-        const val MAX_THRESHOLD = 100
+        val DEFAULT_THRESHOLDS = Thresholds.DEFAULT
+        const val MIN_THRESHOLD = Thresholds.MIN
+        const val MAX_THRESHOLD = Thresholds.MAX
     }
 
     val notificationsEnabled: Flow<Boolean> =
@@ -40,26 +40,26 @@ class SettingsManager(private val context: Context) {
 
     /** Configured thresholds, ascending, de-duplicated. */
     val thresholds: Flow<List<Int>> =
-        context.settingsDataStore.data.map { parseThresholds(it[KEY_THRESHOLDS]) }
+        context.settingsDataStore.data.map { Thresholds.parse(it[KEY_THRESHOLDS]) }
 
     suspend fun setNotificationsEnabled(enabled: Boolean) {
         context.settingsDataStore.edit { it[KEY_NOTIFICATIONS_ENABLED] = enabled }
     }
 
     suspend fun addThreshold(percent: Int) {
-        val clamped = percent.coerceIn(MIN_THRESHOLD, MAX_THRESHOLD)
+        val clamped = Thresholds.clamp(percent)
         context.settingsDataStore.edit { prefs ->
-            val current = parseThresholds(prefs[KEY_THRESHOLDS]).toMutableSet()
+            val current = Thresholds.parse(prefs[KEY_THRESHOLDS]).toMutableSet()
             current.add(clamped)
-            prefs[KEY_THRESHOLDS] = current.sorted().joinToString(",")
+            prefs[KEY_THRESHOLDS] = Thresholds.serialize(current)
         }
     }
 
     suspend fun removeThreshold(percent: Int) {
         context.settingsDataStore.edit { prefs ->
-            val current = parseThresholds(prefs[KEY_THRESHOLDS]).toMutableSet()
+            val current = Thresholds.parse(prefs[KEY_THRESHOLDS]).toMutableSet()
             current.remove(percent)
-            prefs[KEY_THRESHOLDS] = current.sorted().joinToString(",")
+            prefs[KEY_THRESHOLDS] = Thresholds.serialize(current)
         }
     }
 
@@ -75,16 +75,6 @@ class SettingsManager(private val context: Context) {
     /** Replace the persisted set of fired flags. */
     suspend fun setFiredFlags(flags: Set<String>) {
         context.settingsDataStore.edit { it[KEY_FIRED_FLAGS] = flags.joinToString(",") }
-    }
-
-    private fun parseThresholds(raw: String?): List<Int> {
-        if (raw == null) return DEFAULT_THRESHOLDS
-        if (raw.isBlank()) return emptyList()
-        return raw.split(",")
-            .mapNotNull { it.trim().toIntOrNull() }
-            .map { it.coerceIn(MIN_THRESHOLD, MAX_THRESHOLD) }
-            .distinct()
-            .sorted()
     }
 
     private fun parseFlags(raw: String?): Set<String> {

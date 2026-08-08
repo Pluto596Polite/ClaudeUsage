@@ -86,6 +86,30 @@ Claude's internal API endpoints are not publicly documented. The app tries these
 
 If Claude changes their API, you may see an empty dashboard but the app will show the raw API response (tap "View raw API data") to help diagnose.
 
+## Tests
+
+Pure logic is covered by JVM unit tests (no device/emulator needed):
+
+- `VersionCompare` — release version parsing & "is newer" comparison (drives auto-update)
+- `QuotaAlertEvaluator` — threshold crossing, fire-once, re-arm after reset, stale-flag pruning
+- `Thresholds` — parsing/normalising the configurable alert thresholds
+- `UsageData.parseLimits` — parsing the claude.ai `/usage` response
+
+Run them locally:
+
+```bash
+./gradlew testDebugUnitTest
+```
+
+### CI gate
+
+Every push and pull request runs the suite via the **Tests** GitHub Actions workflow
+(`.github/workflows/tests.yml`); the **Release** workflow also runs it before building an APK.
+
+To require it before merging, enable branch protection on `main`
+(**Settings → Branches → Add rule**) and mark the **`unit-tests`** status check as required.
+That blocks merging any PR whose tests fail.
+
 ## Tech stack
 
 | Layer | Library |
