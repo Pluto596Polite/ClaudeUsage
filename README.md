@@ -1,5 +1,22 @@
 # Claude Usage
 
+Monitor your Claude.ai usage limits, percent consumed, and reset times — with an at-a-glance widget.
+Available for **Android** and **iOS / iPadOS**.
+
+| Platform | Location | Glanceable surface |
+|---|---|---|
+| Android | this directory (`app/`) | Home screen widget |
+| iOS & iPadOS | [`ios/`](ios/) | Home Screen + Lock Screen widgets |
+
+**iOS/iPadOS quick start:** `cd ios && ./install.sh` — see [`ios/README.md`](ios/README.md) for the
+full guide, including how to install **entirely free** with a free Apple ID (and the App Group
+caveat for the widget). iOS/iPadOS have no menu bar, so the equivalent glance is a Home Screen or
+Lock Screen widget.
+
+---
+
+## Android
+
 Android app to monitor your Claude.ai usage limits, messages remaining, and reset times — with a home screen widget for at-a-glance stats.
 
 ## Features

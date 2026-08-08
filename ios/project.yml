@@ -1,0 +1,64 @@
+name: ClaudeUsage
+
+options:
+  bundleIdPrefix: com.adriaan
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    # Leave DEVELOPMENT_TEAM empty here — install.sh injects your free/paid team, or set it in Xcode.
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+
+  # ---- Main app -------------------------------------------------------------
+  ClaudeUsage:
+    type: application
+    platform: iOS
+    sources:
+      - path: ClaudeUsage
+      - path: Shared            # shared model / API / storage / theme, compiled into the app
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.adriaan.claudeusage
+        INFOPLIST_FILE: ClaudeUsage/App/Info.plist
+        CODE_SIGN_ENTITLEMENTS: ClaudeUsage/App/ClaudeUsage.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        GENERATE_INFOPLIST_FILE: NO
+        TARGETED_DEVICE_FAMILY: "1,2"   # iPhone + iPad
+    dependencies:
+      - target: ClaudeUsageWidget
+        embed: true
+
+  # ---- Widget extension -----------------------------------------------------
+  ClaudeUsageWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ClaudeUsageWidget
+      - path: Shared            # same shared code, compiled into the widget
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.adriaan.claudeusage.widget
+        INFOPLIST_FILE: ClaudeUsageWidget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: ClaudeUsageWidget/ClaudeUsageWidget.entitlements
+        GENERATE_INFOPLIST_FILE: NO
+        TARGETED_DEVICE_FAMILY: "1,2"
+
+schemes:
+  ClaudeUsage:
+    build:
+      targets:
+        ClaudeUsage: all
+        ClaudeUsageWidget: all
+    run:
+      config: Debug
+    archive:
+      config: Release

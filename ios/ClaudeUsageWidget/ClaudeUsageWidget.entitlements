@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Empty by default so the widget extension builds on a FREE Apple ID. Run the installer with the
+  appgroup option to inject the App Group (paid account or AltStore/SideStore) and let the widget
+  read the app's usage cache. See README.md.
+-->
+<plist version="1.0">
+<dict>
+</dict>
+</plist>

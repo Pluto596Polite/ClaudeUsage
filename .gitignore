@@ -9,3 +9,10 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# iOS / Xcode
+ios/ClaudeUsage.xcodeproj/
+ios/build/
+ios/DerivedData/
+*.xcuserstate
+xcuserdata/

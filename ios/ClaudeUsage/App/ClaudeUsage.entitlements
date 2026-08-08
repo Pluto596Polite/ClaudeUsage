@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Empty by default so the app builds and runs on a FREE Apple ID (Personal Teams cannot provision
+  App Groups). To enable the shared-data Home/Lock Screen widget on a paid account, or via
+  AltStore/SideStore, run the installer with the appgroup option, which injects the App Group here
+  and in the widget's entitlements. See README.md.
+-->
+<plist version="1.0">
+<dict>
+</dict>
+</plist>
