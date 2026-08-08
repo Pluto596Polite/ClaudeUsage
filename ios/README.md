@@ -25,6 +25,14 @@ stats on iPhone and iPad.
 - **Claude design** — the warm dark aesthetic, matching the Android app pixel-for-pixel
 - **Entirely free** — no purchase, no subscription, no server, no backend. All data stays on device.
 
+## No Mac or PC? (iPad-only)
+
+If all you have is an iPad, use the **[`../ios-playground`](../ios-playground)** build instead — a
+Swift Playground app you build and run **entirely on the iPad** with Apple's free Swift Playground
+app, no computer or developer account needed. It gives you the full in-app usage view; only the
+separate Home/Lock Screen widget is unavailable there (widgets need a Mac or a PC sideload). This
+`ios/` project below is the full, widget-capable version.
+
 ## Requirements
 
 - A **Mac** with **Xcode 15+** (to build/sign the app for your device)
